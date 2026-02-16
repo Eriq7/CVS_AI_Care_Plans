@@ -188,6 +188,38 @@
 
   loadHistory();
 
+  /* ── Polling ── */
+  function pollStatus(carePlanId) {
+    const INTERVAL = 3000;  // every 3 seconds
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/careplans/${carePlanId}/status/`);
+        const data = await res.json();
+
+        // Update badge
+        document.getElementById('result-status').className = `badge badge-${data.status}`;
+        document.getElementById('result-status').textContent = data.status;
+
+        if (data.status === 'completed') {
+          clearInterval(timer);
+          document.getElementById('result-content').innerHTML =
+            mdToHtml(data.care_plan_text) +
+            `<a class="btn-download" href="/api/careplans/${carePlanId}/download/">Download .txt</a>`;
+          loadHistory();
+        } else if (data.status === 'failed') {
+          clearInterval(timer);
+          document.getElementById('result-content').innerHTML =
+            `<p style="color:#c00">Generation failed. ${data.care_plan_text || ''}</p>`;
+          loadHistory();
+        }
+        // pending or processing → keep polling
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, INTERVAL);
+  }
+
   /* ── Form submit ── */
   document.getElementById('careplan-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -197,6 +229,9 @@
 
     const resultDiv = document.getElementById('result');
     resultDiv.style.display = 'block';
+    document.getElementById('result-status').className = 'badge badge-pending';
+    document.getElementById('result-status').textContent = 'pending';
+    document.getElementById('result-content').innerHTML = '<p><span class="spinner"></span>Processing, please wait...</p>';
 
     const body = {
       patient_name:  document.getElementById('patient_name').value,
@@ -215,21 +250,9 @@
       });
       const data = await res.json();
 
-      document.getElementById('result-status').className = `badge badge-${data.status}`;
-      document.getElementById('result-status').textContent = data.status;
+      // Start polling for this care plan
+      pollStatus(data.id);
 
-      if (data.status === 'pending') {
-        document.getElementById('result-content').innerHTML =
-          `<p>Care Plan #${data.id} received, queued for processing.</p>`;
-      } else if (data.status === 'completed') {
-        document.getElementById('result-content').innerHTML =
-          mdToHtml(data.care_plan_text) +
-          `<a class="btn-download" href="/api/careplans/${data.id}/download/">Download .txt</a>`;
-      } else {
-        document.getElementById('result-content').innerHTML =
-          `<p style="color:#c00">Generation failed. ${data.care_plan_text || ''}</p>`;
-      }
-      loadHistory();
     } catch (err) {
       document.getElementById('result-status').className = 'badge badge-failed';
       document.getElementById('result-status').textContent = 'failed';

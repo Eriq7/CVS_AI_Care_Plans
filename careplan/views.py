@@ -64,6 +64,12 @@ def list_careplans(request):
 
 
 @require_http_methods(["GET"])
+def careplan_status(request, pk):
+    plan = CarePlan.objects.get(id=pk)
+    return JsonResponse(serialize_careplan(plan))
+
+
+@require_http_methods(["GET"])
 def download_careplan(request, pk):
     plan = CarePlan.objects.get(id=pk)
 
