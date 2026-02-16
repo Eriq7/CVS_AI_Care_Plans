@@ -1,6 +1,6 @@
 from celery import shared_task
 from .models import CarePlan
-from .views import call_llm
+from .services import call_llm
 
 
 @shared_task(bind=True, max_retries=3)
