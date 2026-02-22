@@ -1,10 +1,12 @@
 import os
+import time
 from datetime import date
 
 import openai
 from django.utils import timezone
 
 from .exceptions import BlockError, WarningException
+from .metrics import careplan_requests_total, llm_call_duration_seconds, llm_call_errors_total
 from .models import CarePlan, Order, Patient, Provider
 
 
@@ -147,6 +149,8 @@ def create_careplan(data):
     from .tasks import generate_careplan_task
     generate_careplan_task.delay(care_plan.id)
 
+    careplan_requests_total.labels(status='accepted').inc()
+
     result = {
         'id': care_plan.id,
         'status': 'pending',
@@ -230,14 +234,20 @@ def call_llm(patient_name, medication, icd10_code, provider_name):
         f"4. Monitoring Plan\n"
     )
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are an experienced clinical pharmacist."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.7,
-        max_tokens=1500,
-    )
-
-    return response.choices[0].message.content
+    start = time.monotonic()
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an experienced clinical pharmacist."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_tokens=1500,
+        )
+        llm_call_duration_seconds.observe(time.monotonic() - start)
+        return response.choices[0].message.content
+    except Exception as e:
+        llm_call_duration_seconds.observe(time.monotonic() - start)
+        llm_call_errors_total.labels(error_type=type(e).__name__).inc()
+        raise

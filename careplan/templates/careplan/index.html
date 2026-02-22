@@ -109,9 +109,11 @@
     <h2>New Care Plan Request</h2>
     <form id="careplan-form">
       <div class="form-grid">
-        <div><label>Patient Name</label><input id="patient_name" placeholder="Jane Doe" required></div>
+        <div><label>First Name</label><input id="patient_first_name" placeholder="Jane" required></div>
+        <div><label>Last Name</label><input id="patient_last_name" placeholder="Doe" required></div>
         <div><label>MRN</label><input id="patient_mrn" placeholder="123456" required></div>
-        <div><label>Medication</label><input id="medication" placeholder="Metformin 500mg" required></div>
+        <div><label>Date of Birth</label><input id="date_of_birth" type="date" required></div>
+        <div><label>Medication</label><input id="medication_name" placeholder="Metformin 500mg" required></div>
         <div><label>ICD-10 Code</label><input id="icd10_code" placeholder="E11.9" required></div>
         <div><label>Provider Name</label><input id="provider_name" placeholder="Smith" required></div>
         <div><label>Provider NPI</label><input id="provider_npi" placeholder="1234567890" required></div>
@@ -234,12 +236,14 @@
     document.getElementById('result-content').innerHTML = '<p><span class="spinner"></span>Processing, please wait...</p>';
 
     const body = {
-      patient_name:  document.getElementById('patient_name').value,
-      patient_mrn:   document.getElementById('patient_mrn').value,
-      medication:    document.getElementById('medication').value,
-      icd10_code:    document.getElementById('icd10_code').value,
-      provider_name: document.getElementById('provider_name').value,
-      provider_npi:  document.getElementById('provider_npi').value,
+      patient_first_name: document.getElementById('patient_first_name').value,
+      patient_last_name:  document.getElementById('patient_last_name').value,
+      patient_mrn:        document.getElementById('patient_mrn').value,
+      date_of_birth:      document.getElementById('date_of_birth').value,
+      medication_name:    document.getElementById('medication_name').value,
+      icd10_code:         document.getElementById('icd10_code').value,
+      provider_name:      document.getElementById('provider_name').value,
+      provider_npi:       document.getElementById('provider_npi').value,
     };
 
     try {

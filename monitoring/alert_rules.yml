@@ -1,0 +1,82 @@
+groups:
+  - name: careplan_alerts
+    rules:
+      # ── Error Alerts ────────────────────────────
+      - alert: HighHTTPErrorRate
+        expr: |
+          sum(rate(http_request_errors_total{status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_request_duration_seconds_count[5m]))
+          > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate above 5%"
+
+      - alert: CarePlanGenerationFailing
+        expr: rate(celery_task_failures_total{task_name="generate_careplan_task"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Care plan generation tasks are permanently failing"
+
+      - alert: HighRetryRate
+        expr: rate(celery_task_retries_total{task_name="generate_careplan_task"}[5m]) > 0.08
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Celery task retry rate"
+
+      - alert: LLMErrorSpike
+        expr: rate(llm_call_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM API errors spiking"
+
+      # ── Performance Alerts ──────────────────────
+      - alert: SlowAPIResponses
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency above 2 seconds"
+
+      - alert: SlowCarePlanGeneration
+        expr: histogram_quantile(0.95, rate(careplan_generation_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Care plan generation p95 above 30 seconds"
+
+      # ── Business Alerts ─────────────────────────
+      - alert: CarePlanQueueBacklog
+        expr: careplan_active_count{status=~"pending|processing"} > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Care plan queue backing up"
+
+      # ── Resource Alerts ─────────────────────────
+      - alert: PostgresConnectionsHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connections above 80"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 80%"

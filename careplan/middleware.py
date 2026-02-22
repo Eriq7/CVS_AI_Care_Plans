@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 
-from .exceptions import BaseAppException
+from .exceptions import BaseAppException, BlockError, WarningException
+from .metrics import careplan_requests_total, careplan_duplicate_blocks_total
 
 
 class ExceptionHandlerMiddleware:
@@ -20,6 +21,12 @@ class ExceptionHandlerMiddleware:
     def process_exception(self, request, exception):
         # Only handle our custom exceptions
         if isinstance(exception, BaseAppException):
+            if isinstance(exception, BlockError):
+                careplan_requests_total.labels(status='blocked').inc()
+                careplan_duplicate_blocks_total.labels(reason=exception.code).inc()
+            elif isinstance(exception, WarningException):
+                careplan_requests_total.labels(status='warning').inc()
+
             return JsonResponse(
                 exception.to_dict(),
                 status=exception.http_status,
